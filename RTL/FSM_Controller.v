@@ -3,6 +3,210 @@ module FSM_CONTROLLER(
     input resetn,
     input pkt_valid,
     input fifo_full,
+    input fifo_empty0,
+    input fifo_empty1,
+    input fifo_empty2,
+    input soft_reset0,
+    input soft_reset1,
+    input soft_reset2,
+    input parity_done,
+    input low_packet_valid,
+    input [1:0] fifo_add,
+
+    output write_en,
+    output detect_add,
+    output ld_state,
+    output laf_state,
+    output lfd_state,
+    output full_state,
+    output parity_check_state,
+    output busy,
+    output load_parity_state
+);
+
+parameter DETECT_ADD         = 3'd0,
+          LOAD_ADDRESS       = 3'd1,
+          LOAD_DATA          = 3'd2,
+          FIFO_FULL          = 3'd3,
+          WAIT_TILL_EMPTY    = 3'd4,
+          LOAD_AFTER_FULL    = 3'd5,
+          CHECK_PARITY_ERROR = 3'd6,
+          LOAD_PARITY        = 3'd7;
+
+reg [2:0] ps, ns;
+reg [1:0] stored_addr;
+
+always @(posedge clk)
+begin
+    if(!resetn)
+        ps <= DETECT_ADD;
+    else
+        ps <= ns;
+end
+
+always @(*)
+begin
+    ns = ps;
+    stored_addr = fifo_add;
+
+    case(ps)
+
+        DETECT_ADD:
+        begin
+            if((pkt_valid && (fifo_add==0) && fifo_empty0) ||
+               (pkt_valid && (fifo_add==1) && fifo_empty1) ||
+               (pkt_valid && (fifo_add==2) && fifo_empty2))
+            begin
+                ns = LOAD_ADDRESS;
+            end
+
+            else if((pkt_valid && (fifo_add==0) && !fifo_empty0) ||
+                    (pkt_valid && (fifo_add==1) && !fifo_empty1) ||
+                    (pkt_valid && (fifo_add==2) && !fifo_empty2))
+            begin
+                ns = WAIT_TILL_EMPTY;
+            end
+
+            else
+                ns = DETECT_ADD;
+        end
+
+        LOAD_ADDRESS:
+        begin
+            if(pkt_valid)
+                ns = LOAD_DATA;
+            else
+                ns = DETECT_ADD;
+        end
+
+        LOAD_DATA:
+        begin
+            if(fifo_full)
+                ns = FIFO_FULL;
+
+            else if(!pkt_valid)
+                ns = LOAD_PARITY;
+
+            else
+                ns = LOAD_DATA;
+        end
+
+        LOAD_PARITY:
+        begin
+            ns = CHECK_PARITY_ERROR;
+        end
+
+        CHECK_PARITY_ERROR:
+        begin
+            if(fifo_full)
+                ns = FIFO_FULL;
+
+            else if(parity_done)
+                ns = DETECT_ADD;
+        end
+
+        WAIT_TILL_EMPTY:
+        begin
+            if((stored_addr==0 && fifo_empty0) ||
+               (stored_addr==1 && fifo_empty1) ||
+               (stored_addr==2 && fifo_empty2))
+                ns = LOAD_ADDRESS;
+
+            else
+                ns = WAIT_TILL_EMPTY;
+        end
+
+        FIFO_FULL:
+        begin
+            if(!fifo_full)
+                ns = LOAD_AFTER_FULL;
+
+            else
+                ns = FIFO_FULL;
+        end
+
+        LOAD_AFTER_FULL:
+        begin
+            if(parity_done)
+                ns = DETECT_ADD;
+
+            else if(!low_packet_valid)
+                ns = LOAD_DATA;
+
+            else
+                ns = LOAD_PARITY;
+        end
+
+        default:
+            ns = DETECT_ADD;
+
+    endcase
+
+end
+
+assign detect_add         = (ps == DETECT_ADD);
+assign lfd_state          = (ps == LOAD_ADDRESS);
+assign ld_state           = (ps == LOAD_DATA);
+assign full_state         = (ps == FIFO_FULL);
+assign laf_state          = (ps == LOAD_AFTER_FULL);
+assign parity_check_state = (ps == CHECK_PARITY_ERROR);
+assign load_parity_state  = (ps == LOAD_PARITY);
+
+assign write_en = (ps == LOAD_DATA) ||
+                  (ps == LOAD_PARITY) ||
+                  (ps == LOAD_AFTER_FULL);
+
+assign busy = (ps != DETECT_ADD);
+
+endmodule
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+module FSM_CONTROLLER(
+    input clk,
+    input resetn,
+    input pkt_valid,
+    input fifo_full,
     input fifo_empty0,fifo_empty1,fifo_empty2,
     input soft_reset0,soft_reset1,soft_reset2,
     input parity_done,
