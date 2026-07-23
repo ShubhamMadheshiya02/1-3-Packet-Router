@@ -72,6 +72,41 @@ assign empty = (wr_pointer == rd_pointer);
 
 endmodule
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -systemverilog
 
 
