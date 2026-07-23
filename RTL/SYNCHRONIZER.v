@@ -1,3 +1,199 @@
+module SYNCHRONIZER(
+    input clk,
+    input resetn,
+    input [1:0] fifo_add,
+    input detect_add,
+    input fifo_empty0,
+    input fifo_empty1,
+    input fifo_empty2,
+    input fifo_full0,
+    input fifo_full1,
+    input fifo_full2,
+    input read_en0,
+    input read_en1,
+    input read_en2,
+    input write_en,
+
+    output reg [2:0] write_en_reg,
+    output reg fifo_full,
+    output reg soft_reset0,
+    output reg soft_reset1,
+    output reg soft_reset2,
+    output vld_out0,
+    output vld_out1,
+    output vld_out2
+);
+
+reg [5:0] counter0;
+reg [5:0] counter1;
+reg [5:0] counter2;
+reg [1:0] fifo_add_temp;
+
+always @(posedge clk)
+begin
+    if(!resetn)
+    begin
+        fifo_add_temp <= 2'b00;
+    end
+    else if(detect_add)
+    begin
+        fifo_add_temp <= fifo_add;
+    end
+end
+
+always @(*)
+begin
+    write_en_reg = 3'b000;
+
+    if(write_en)
+    begin
+        case(fifo_add_temp)
+            2'b00 : write_en_reg = 3'b001;
+            2'b01 : write_en_reg = 3'b010;
+            2'b10 : write_en_reg = 3'b100;
+            default : write_en_reg = 3'b000;
+        endcase
+    end
+end
+
+always @(*)
+begin
+    fifo_full = 1'b0;
+
+    case(fifo_add_temp)
+        2'b00 : fifo_full = fifo_full0;
+        2'b01 : fifo_full = fifo_full1;
+        2'b10 : fifo_full = fifo_full2;
+        default : fifo_full = 1'b0;
+    endcase
+end
+
+assign vld_out0 = ~fifo_empty0;
+assign vld_out1 = ~fifo_empty1;
+assign vld_out2 = ~fifo_empty2;
+
+always @(posedge clk)
+begin
+    if(!resetn)
+    begin
+        counter0 <= 6'd0;
+        soft_reset0 <= 1'b0;
+    end
+    else if(vld_out0)
+    begin
+        if(!read_en0)
+        begin
+            if(counter0 == 6'd30)
+            begin
+                soft_reset0 <= 1'b1;
+                counter0 <= 6'd0;
+            end
+            else
+            begin
+                soft_reset0 <= 1'b0;
+                counter0 <= counter0 + 1'b1;
+            end
+        end
+        else
+        begin
+            counter0 <= 6'd0;
+        end
+    end
+end
+
+always @(posedge clk)
+begin
+    if(!resetn)
+    begin
+        counter1 <= 6'd0;
+        soft_reset1 <= 1'b0;
+    end
+    else if(vld_out1)
+    begin
+        if(!read_en1)
+        begin
+            if(counter1 == 6'd30)
+            begin
+                soft_reset1 <= 1'b1;
+                counter1 <= 6'd0;
+            end
+            else
+            begin
+                soft_reset1 <= 1'b0;
+                counter1 <= counter1 + 1'b1;
+            end
+        end
+        else
+        begin
+            counter1 <= 6'd0;
+        end
+    end
+end
+
+always @(posedge clk)
+begin
+    if(!resetn)
+    begin
+        counter2 <= 6'd0;
+        soft_reset2 <= 1'b0;
+    end
+    else if(vld_out2)
+    begin
+        if(!read_en2)
+        begin
+            if(counter2 == 6'd30)
+            begin
+                soft_reset2 <= 1'b1;
+                counter2 <= 6'd0;
+            end
+            else
+            begin
+                soft_reset2 <= 1'b0;
+                counter2 <= counter2 + 1'b1;
+            end
+        end
+        else
+        begin
+            counter2 <= 6'd0;
+        end
+    end
+end
+
+endmodule
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
